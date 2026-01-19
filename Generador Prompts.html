@@ -1,0 +1,969 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <title>Curso ChatGPT · Generador docente (LOMLOE) — móvil</title>
+  <meta name="description" content="Una sola página móvil para profes: genera prompts (base+ajustes+documentos), mejora por conversación y usa plantillas. Incluye prompt final + copiar + abrir ChatGPT."/>
+  <style>
+    :root{
+      --bg:#0b1024; --surface:#101833; --text:#eef2ff; --muted:#a7b5d7;
+      --brand:#7aa7ff; --accent:#79e6b5; --border:#1f2745; --code:#0b1331;
+      --radius:16px; --maxw:820px; --pad:14px; --tap:44px;
+      --safeB: env(safe-area-inset-bottom, 0px);
+      --bottomBar: 64px;
+    }
+    @media (prefers-color-scheme: light){
+      :root{ --bg:#f6f8ff; --surface:#ffffff; --text:#0d1533; --muted:#475569; --border:#e3e8f5; --code:#f1f4fb }
+    }
+    *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;
+      background:var(--bg); color:var(--text);
+      line-height:1.7;
+      text-rendering:optimizeLegibility;
+    }
+    a{color:var(--brand);text-decoration:none}
+    header{
+      position:sticky;top:0;z-index:40;
+      background:rgba(16,24,51,.95);backdrop-filter:blur(8px);
+      border-bottom:1px solid var(--border)
+    }
+    .row{display:flex;align-items:center;gap:10px;height:56px;padding:0 var(--pad)}
+    .logo{width:24px;height:24px;border-radius:8px;background:conic-gradient(from 200deg,var(--brand),var(--accent),var(--brand))}
+    .brand{display:flex;align-items:center;gap:10px;font-weight:800}
+    .grow{flex:1}
+    .btn{
+      appearance:none;border:1px solid var(--border);background:var(--surface);color:var(--text);
+      padding:10px 12px;border-radius:12px;cursor:pointer;min-height:var(--tap);
+      font-size:15px;transition:.15s ease;display:inline-flex;justify-content:center;align-items:center;gap:8px
+    }
+    .btn.primary{background:linear-gradient(180deg,#2c52ff,#2136a8);border-color:#2e43c7}
+    .btn:active{transform:scale(.99)}
+    .container{width:min(96vw,var(--maxw));margin:0 auto;padding:var(--pad)}
+    .hero{
+      border-bottom:1px solid var(--border);
+      background:
+        radial-gradient(640px 280px at 0% 0%, rgba(122,167,255,.22), transparent 60%),
+        radial-gradient(640px 280px at 100% 0%, rgba(121,230,181,.16), transparent 60%)
+    }
+    h1{font-size:clamp(22px,6vw,30px);margin:10px 0 6px}
+    .lead{color:var(--muted);margin:2px 0 10px}
+
+    /* Step bar (menos apartados, más sentido) */
+    .steps{
+      display:flex;gap:8px;overflow-x:auto;padding:6px 0 10px;margin:6px 0 0;
+      scroll-snap-type:x mandatory
+    }
+    .steps::-webkit-scrollbar{display:none}
+    .step{
+      scroll-snap-align:start;
+      flex:0 0 auto;
+      padding:8px 10px;
+      border:1px solid var(--border);
+      border-radius:999px;
+      color:var(--muted);
+      font-size:14px;
+      white-space:nowrap
+    }
+    .step.active{color:var(--text);border-color:rgba(122,167,255,.6);background:rgba(122,167,255,.08)}
+
+    section{scroll-margin-top:74px}
+    .card{
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:var(--radius);padding:14px;margin:10px 0;
+      box-shadow:0 4px 16px rgba(10,20,40,.22);
+      overflow:hidden
+    }
+    h2{margin:0 0 8px;font-size:18px}
+    h3{margin:14px 0 8px;font-size:16px}
+
+    /* Form controls */
+    .builder{display:grid;grid-template-columns:1fr;gap:10px}
+    .row2{display:grid;grid-template-columns:1fr;gap:10px}
+    @media(min-width:760px){ .row2{grid-template-columns:1fr 1fr} }
+    label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+    input,select,textarea{
+      width:100%;
+      padding:12px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background:rgba(255,255,255,.03);
+      color:var(--text);
+      font-size:15px;
+      min-height:var(--tap);
+      outline:none;
+    }
+    textarea{
+      min-height:140px;
+      resize:vertical;
+      white-space:pre-wrap;
+      overflow:auto;
+    }
+
+    /* Collapsibles */
+    details{
+      border:1px solid var(--border);
+      border-radius:12px;
+      background:rgba(255,255,255,.02);
+      padding:8px 10px
+    }
+    details + details{margin-top:10px}
+    summary{
+      cursor:pointer;
+      list-style:none;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      font-weight:700;
+      user-select:none;
+    }
+    summary::-webkit-details-marker{display:none}
+    .pill{
+      display:inline-flex;align-items:center;justify-content:center;
+      width:22px;height:22px;border-radius:8px;
+      background:rgba(122,167,255,.18);
+      border:1px solid rgba(122,167,255,.45);
+      color:var(--text);
+      font-size:12px;
+      flex:0 0 auto
+    }
+    .hint{font-size:12px;color:var(--muted);margin-top:6px}
+
+    /* Chips */
+    .chips{display:flex;flex-wrap:wrap;gap:8px}
+    .chip{
+      border:1px solid var(--border);
+      border-radius:999px;
+      padding:8px 10px;
+      font-size:13px;
+      cursor:pointer;
+      background:rgba(255,255,255,.02);
+      white-space:normal;           /* evita “colapso” */
+      line-height:1.35;
+      max-width:100%;
+      overflow-wrap:anywhere;
+      word-break:break-word;
+    }
+    .chip.active{background:rgba(122,167,255,.15);border-color:rgba(122,167,255,.6)}
+
+    /* Code blocks */
+    pre{
+      background:var(--code);
+      border:1px solid var(--border);
+      border-radius:12px;
+      padding:40px 12px 12px 12px;
+      overflow:auto;
+      position:relative;
+      max-width:100%;
+      white-space:pre;
+    }
+    code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;font-size:13px}
+    .copy{position:absolute;top:8px;right:8px;font-size:12px}
+
+    /* Bottom bar */
+    .bottom{
+      position:sticky;bottom:0;z-index:50;
+      background:rgba(16,24,51,.96);backdrop-filter:blur(8px);
+      border-top:1px solid var(--border);
+    }
+    .bottom .bar{
+      display:flex;gap:8px;align-items:center;justify-content:space-between;
+      padding:10px var(--pad);
+      padding-bottom:calc(10px + var(--safeB));
+      min-height:calc(var(--bottomBar) + var(--safeB));
+    }
+    .bottom .btn{flex:1}
+    /* Deja espacio para que nada quede tapado por la barra inferior */
+    main{padding-bottom:calc(var(--bottomBar) + var(--safeB) + 18px)}
+
+    /* Anti-overflow general */
+    p,li,summary,h1,h2,h3{overflow-wrap:anywhere;word-break:break-word;hyphens:auto}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="row">
+      <div class="brand"><div class="logo"></div><div>Generador docente · LOMLOE</div></div>
+      <div class="grow"></div>
+      <button class="btn" id="theme">Tema</button>
+      <button class="btn primary" onclick="window.print()">PDF</button>
+    </div>
+  </header>
+
+  <div class="hero">
+    <div class="container">
+      <h1>ChatGPT para profes: genera, afina y mejora</h1>
+      <p class="lead">Una sola página, móvil, para crear prompts “de calidad departamento” en 2–3 minutos.</p>
+      <div class="steps" id="steps">
+        <a class="step" href="#generar">1) Generar</a>
+        <a class="step" href="#mejorar">2) Mejorar</a>
+        <a class="step" href="#plantillas">3) Plantillas</a>
+      </div>
+    </div>
+  </div>
+
+  <main>
+    <div class="container">
+
+      <!-- 1) GENERAR (incluye base + ajustes + documentos + prompt final) -->
+      <section id="generar" class="card">
+        <h2>1) Generar el prompt</h2>
+        <p class="lead">Empieza por el “prompt base”. Si quieres máxima precisión, abre “Ajustes finos” y/o “Documentación”.</p>
+
+        <h3>Prompt base</h3>
+        <div class="builder">
+          <div class="row2">
+            <div>
+              <label>Producto</label>
+              <div class="hint">Ejemplos: examen, SdA, rúbrica, <strong>adaptación curricular (NEAE)</strong>, <strong>guía docente</strong>…</div>
+              <select id="p-producto">
+                <option value="prueba (evaluación)" selected>Prueba (evaluación)</option>
+<option value="situación de aprendizaje (SdA) con producto final">Situación de aprendizaje (SdA)</option>
+                <option value="tarea competencial (actividad final + evaluación)">Tarea competencial</option>
+                <option value="rúbrica (4 niveles) con descriptores observables">Rúbrica (4 niveles)</option>
+                <option value="programación de unidad/SdA por apartados (LOMLOE)">Programación (unidad/SdA)</option>
+                <option value="adaptación curricular individualizada (NEAE) — objetivos, actividades y evaluación adaptada">Adaptación curricular (NEAE)</option>
+                <option value="guía docente para impartir un tema (plan de sesiones + recursos + evaluación)">Guía docente (plan de sesiones)</option>
+                <option value="guion de diapositivas para Overleaf/LaTeX Beamer">Diapositivas (Overleaf/LaTeX)</option>
+                <option value="cuestionario Moodle en formato GIFT">Cuestionario Moodle (GIFT)</option>
+</select>
+            </div>
+            <div>
+              <label>Materia</label>
+              <input id="p-materia" placeholder="p.ej., Matemáticas / Lengua / Biología..."/>
+            </div>
+          </div>
+
+          <div class="row2">
+            <div>
+              <label>Etapa</label>
+              <select id="p-etapa">
+                <option>Primaria</option>
+                <option selected>ESO</option>
+                <option>Bachillerato</option>
+                <option>FP Básica</option>
+                <option>Grado Medio (FP)</option>
+                <option>Grado Superior (FP)</option>
+              </select>
+            </div>
+            <div>
+              <label>Curso</label>
+              <select id="p-curso">
+                <option selected>1.º</option><option>2.º</option><option>3.º</option><option>4.º</option><option>5.º</option><option>6.º</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row2">
+            <div>
+              <label>Objetivo didáctico (1 frase)</label>
+              <input id="p-objetivo" placeholder="p.ej., resolver problemas en contexto y justificar el procedimiento"/>
+            </div>
+            <div>
+              <label>Perfil del grupo</label>
+              <input id="p-perfil" placeholder="p.ej., grupo heterogéneo; NEAE; ritmos diversos"/>
+            </div>
+          </div>
+          <div class="row2">
+            <div>
+              <label id="p-metodo-label">Metodología (cómo vas a enseñar)</label>
+              <select id="p-metodo">
+                <option selected>mixta (explicación + práctica guiada)</option>
+                <option>flipped classroom (clase invertida)</option>
+                <option>clase magistral (exposición docente)</option>
+                <option>aprendizaje basado en proyectos (ABP)</option>
+                <option>aprendizaje cooperativo</option>
+                <option>indagación / aprendizaje por descubrimiento</option>
+                <option>gamificación</option>
+                <option>aprendizaje-servicio (ApS)</option>
+              </select>
+            </div>
+            <div id="modalidad-wrap">
+            <div>
+              <label>Dinámica de aula</label>
+              <select id="p-modalidad">
+                <option selected>resolución de tareas en aula (práctica guiada)</option>
+                <option>explicación + ejemplos breves</option>
+                <option>taller / laboratorio</option>
+                <option>debate / puesta en común</option>
+                <option>trabajo cooperativo (roles)</option>
+                <option>estaciones / rincones</option>
+                <option>indagación / aprendizaje por descubrimiento</option>
+                <option>exposición del alumnado</option>
+                <option>proyecto / producto final</option>
+              </select>
+            </div>
+            </div>
+
+          </div>
+
+          <details>
+            <summary><span class="pill">+</span> Opciones LOMLOE (competencias / criterios / saberes)</summary>
+            <div class="builder" style="margin-top:10px">
+              <div class="row2">
+                <div>
+                  <label>Competencias específicas (código + texto / resumen)</label>
+                  <textarea id="p-comp" placeholder="Ej.: CE1 — Resolver problemas en contextos reales…"></textarea>
+                </div>
+                <div>
+                  <label>Competencias clave (opcional)</label>
+                  <input id="p-cc" placeholder="CCL, STEM, CD… (si procede)"/>
+                </div>
+              </div>
+              <div class="row2">
+                <div>
+                  <label>Criterios de evaluación (código + texto / resumen)</label>
+                  <textarea id="p-criterios" placeholder="Ej.: 2.1 — Aplica estrategias de cálculo…&#10;2.2 — Justifica procedimientos…"></textarea>
+                </div>
+                <div>
+                  <label>Saberes básicos (breve)</label>
+                  <input id="p-saberes" placeholder="lista breve o resumen"/>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <div class="row2">
+            <div>
+              <label>Tono</label>
+              <select id="p-tono">
+                <option selected>didáctico y claro</option>
+                <option>cercano y motivador</option>
+                <option>formal y profesional</option>
+                <option>muy conciso</option>
+              </select>
+            </div>
+            <div>
+              <label>Formato de salida</label>
+              <select id="p-formato">
+                <option selected>texto por apartados (LOMLOE)</option>
+                <option>tabla Markdown (criterio | evidencia | tarea)</option>
+                <option>lista numerada paso a paso</option>
+                <option>JSON (para importación)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row2">
+            <div>
+              <label>Longitud</label>
+              <select id="p-long">
+                <option selected>breve</option>
+                <option>media</option>
+                <option>amplia</option>
+              </select>
+              <div class="hint">Idioma fijo: <strong>español (Canarias)</strong>.</div>
+            </div>
+          </div>
+
+          <div>
+            <label>Activadores rápidos</label>
+            <div class="chips" id="p-opc">
+              <div class="chip" data-key="pasos">Entrega por partes y espera mi OK</div>
+              <div class="chip" data-key="dua">Incluye DUA / accesibilidad</div>
+              <div class="chip" data-key="codigos">Códigos visibles</div>
+              <div class="chip" data-key="evidencias">Evidencias + instrumento</div>
+</div>
+            <div class="hint">Recomendado: “Códigos visibles” + “Evidencias + instrumento” + “Entrega por partes”.</div>
+            <div class="hint"><strong>Cómo usarlo:</strong> rellena lo mínimo (Producto, Materia, Etapa y Curso). Opcional: abre “Ajustes finos” o “Orden + ejemplo”. Luego pulsa <strong>Generar prompt final</strong> y copia.</div>
+          </div>
+
+          
+</div>
+
+        <h3>Ajustes finos (opcional)</h3>
+        <div id="ajustes-wrap">
+        <details>
+          <summary><span class="pill">A</span> Cómo debe responder ChatGPT (rol docente y estilo)</summary>
+          <div class="builder" style="margin-top:10px">
+            <div class="row2">
+              <div>
+                <label>Rol</label>
+                <select id="a-rol">
+                  <option selected>profesor/a (especialista en tu materia)</option>
+                  <option>maestro/a (Primaria)</option>
+                  <option>maestro/a de Pedagogía Terapéutica (PT) — atención a la diversidad</option>
+                  <option>docente con experiencia en LOMLOE (programación y evaluación)</option>
+                </select>
+              </div>
+              <div>
+                <label>Estilo</label>
+                <select id="a-estilo">
+                  <option selected>muy práctico (listo para aula)</option>
+                  <option>riguroso y profesional</option>
+                  <option>claro y cercano</option>
+                  <option>muy conciso</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label>Notas de estilo (opcional)</label>
+              <input id="a-notas" placeholder="p.ej., lenguaje no violento; instrucciones cortas; ejemplos cotidianos"/>
+            </div>
+          </div>
+        </details>
+
+        <details>
+          <summary><span class="pill">B</span> Atención a la diversidad (NEAE / ampliación)</summary>
+          <div class="builder" style="margin-top:10px">
+            <div class="row2">
+              <div>
+                <label>Apoyos NEAE</label>
+                <select id="a-neae">
+                  <option selected>ligero</option>
+                  <option>alto</option>
+                  <option>ninguno</option>
+                </select>
+              </div>
+              <div>
+                <label>Ampliación (altas capacidades)</label>
+                <select id="a-ac"><option>sí</option><option selected>no</option></select>
+              </div>
+            </div>
+            <div class="row2">
+              <div>
+                <label>Nivel cognitivo</label>
+                <select id="a-bloom">
+                  <option selected>aplicar / resolver</option>
+                  <option>comprender / explicar</option>
+                  <option>analizar / comparar</option>
+                  <option>evaluar / justificar</option>
+                  <option>crear / diseñar</option>
+                </select>
+              </div>
+              <div>
+                <label>Ejemplos por bloque/ítem</label>
+                <select id="a-ej"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="0">0</option></select>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <details>
+          <summary><span class="pill">C</span> Evaluación (evidencias + instrumento)</summary>
+          <div class="builder" style="margin-top:10px">
+            <div>
+              <label>Evidencias observables (toca para incluir)</label>
+              <div class="chips" id="a-evid">
+                <div class="chip">procedimiento y razonamiento</div>
+                <div class="chip">cálculo correcto/eficiente</div>
+                <div class="chip">argumentación/justificación</div>
+                <div class="chip">comunicación (orden, vocabulario)</div>
+                <div class="chip">representaciones (diagramas/gráficas)</div>
+                <div class="chip">autoevaluación/coevaluación</div>
+              </div>
+            </div>
+            <div class="row2">
+              <div>
+                <label>Instrumento</label>
+                <select id="a-inst">
+                  <option selected>rúbrica</option>
+                  <option>lista de cotejo</option>
+                  <option>escala de valoración</option>
+                  <option>registro de observación</option>
+                </select>
+              </div>
+              <div>
+                <label>Escala / niveles</label>
+                <select id="a-escala">
+                  <option selected>4 niveles (Inicial → Excelente)</option>
+                  <option>Insuficiente / Suficiente / Bien / Notable / Sobresaliente</option>
+                  <option>A–D con descriptores</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <details>
+          <summary><span class="pill">D</span> Contexto y restricciones (centro)</summary>
+          <div class="builder" style="margin-top:10px">
+            <div class="row2">
+              <div>
+                <label>Contexto</label>
+                <textarea id="a-contexto" placeholder="p.ej., 55 min; pizarra digital; trabajo por parejas…"></textarea>
+              </div>
+              <div>
+                <label>Restricciones</label>
+                <textarea id="a-restr" placeholder="p.ej., máximo 1 página; sin violencia; incluir solución; lenguaje accesible…"></textarea>
+              </div>
+            </div>
+            <div class="row2">
+<div>
+                <label>Formato final</label>
+                <select id="a-formato">
+                  <option selected>texto por apartados</option>
+                  <option>tabla Markdown</option>
+                  <option>lista numerada</option>
+                  <option>JSON</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        
+
+        </div>
+
+        <h3>Orden + ejemplo (opcional)</h3>
+        <div id="docs-wrap">
+          <details>
+          <summary><span class="pill">📎</span> Pegar orden específica y ejemplo</summary>
+          <div class="builder" style="margin-top:10px">
+            <div class="row2">
+              <div><label>Orden específica / condiciones (centro/CCAA)</label><textarea id="d-orden" placeholder="Pega instrucciones obligatorias: formato, tiempos, evaluación, criterios de calificación, etc."></textarea></div>
+              <div><label>Ejemplo propio (muy recomendado)</label><textarea id="d-ejemplo" placeholder="Pega un fragmento bien hecho (examen/SdA/rúbrica). ChatGPT lo usará como estándar de calidad (formato, nivel y estilo)."></textarea></div>
+            </div>
+
+            
+    </div>
+        </details>
+        </div>
+
+        <h3>Prompt final (listo para pegar)</h3>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn primary" id="m-build">Generar prompt final</button>
+          <button class="btn" id="m-copy">Copiar</button>
+          <button class="btn" id="m-dl">Descargar .txt</button>
+          <a class="btn" id="m-open" href="https://chat.openai.com" target="_blank" rel="noopener">Abrir ChatGPT</a>
+        </div>
+        <textarea id="m-out" placeholder="Aquí aparecerá el prompt final (base + ajustes + documentación)…"></textarea>
+      </section>
+
+      <!-- 2) MEJORAR -->
+      <section id="mejorar" class="card">
+        <h2>2) Mejorar por conversación</h2>
+        <p class="lead">Úsalo después de la primera respuesta: “hazlo más así…”.</p>
+
+        <div class="builder">
+          <div class="row2">
+            <div><label>Reduce longitud (%)</label><input id="i-reduce" type="range" min="0" max="60" value="25"/></div>
+            <div><label>Objetivo palabras (~)</label><input id="i-words" type="number" min="60" max="500" value="160"/></div>
+          </div>
+
+          <div>
+            <label>Qué quieres mejorar (toca)</label>
+            <div class="chips" id="i-mejoras">
+              <div class="chip">más claro y directo</div>
+              <div class="chip">más ejemplos cotidianos</div>
+              <div class="chip">mejor alineación a criterios</div>
+              <div class="chip">más evidencias observables</div>
+              <div class="chip">formato tabla</div>
+              <div class="chip">entrega por partes</div>
+            </div>
+          </div>
+
+          <div class="row2">
+            <div><label>Comentario (opcional)</label><input id="i-coment" placeholder="p.ej., ‘me falta variedad y apoyos NEAE’"/></div>
+            <div><label>Forzar preguntas antes de asumir</label>
+              <select id="i-preguntar"><option selected>sí</option><option>no</option></select>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn primary" id="i-gen">Generar mensaje de mejora</button>
+            <button class="btn" id="i-copy">Copiar</button>
+          </div>
+
+          <pre><button class="btn copy">Copiar</button><code id="i-out"></code></pre>
+        </div>
+      </section>
+
+      <!-- 3) PLANTILLAS -->
+      <section id="plantillas" class="card">
+        <h2>3) Plantillas rápidas (listas para aula)</h2>
+        <p class="lead">Para demostrar “lo que puede hacer” en directo, sin inventos raros.</p>
+
+        <details>
+          <summary><span class="pill">Q</span> Acuerdo de calidad</summary>
+<pre><button class="btn copy">Copiar</button><code>Actúa como docente experto en LOMLOE. Si falta información, pregúntame antes de asumir. Alinea a criterios y saberes (códigos visibles) y añade evidencias observables + instrumento. Entrega por partes y espera mi OK. Lenguaje inclusivo, claro y no violento.</code></pre>
+        </details>
+
+        <details>
+          <summary><span class="pill">E</span> Prueba escrita por preguntas (paso a paso)</summary>
+<pre><button class="btn copy">Copiar</button><code>Vamos a elaborar una prueba escrita de [N] preguntas para [ETAPA/Curso/Materia]. Empezamos por la 1: dame 3 propuestas alineadas con [CÓDIGOS]. Incluye (a) enunciado, (b) solución breve, (c) criterio con código, (d) evidencia observable. Tras elegir, pasamos a la 2, etc.</code></pre>
+        </details>
+
+        <details>
+          <summary><span class="pill">S</span> Situación de aprendizaje (SdA) completa</summary>
+<pre><button class="btn copy">Copiar</button><code>Diseña una SdA para [ETAPA/Curso/Materia] con producto final [X]. Incluye: contexto, objetivos, competencias específicas, criterios (códigos), saberes, tareas secuenciadas, atención a la diversidad (DUA + NEAE + ampliación), instrumentos de evaluación y evidencias observables por criterio, y una propuesta de calificación si procede.</code></pre>
+        </details>
+
+        <details>
+          <summary><span class="pill">O</span> Overleaf/LaTeX (Beamer) — presentación</summary>
+<pre><button class="btn copy">Copiar</button><code>Genera el guion y el código LaTeX (Beamer) para una presentación de [TEMA] en [ETAPA/Curso]. Incluye: 1) objetivos, 2) explicación breve con ejemplos, 3) 3 actividades, 4) mini-evaluación final, 5) cierre. Estilo claro, sin exceso de texto.</code></pre>
+        </details>
+      </section>
+
+    </div>
+  </main>
+
+  <nav class="bottom">
+    <div class="container bar">
+      <a class="btn primary" href="https://chat.openai.com" target="_blank" rel="noopener">Abrir ChatGPT</a>
+      <button class="btn" id="quick-copy">Copiar prompt</button>
+      <button class="btn" onclick="window.scrollTo({top:0,behavior:'smooth'})">Arriba</button>
+    </div>
+  </nav>
+
+  
+  <script>
+const $=s=>document.querySelector(s);
+    const $$=s=>Array.from(document.querySelectorAll(s));
+
+    // ===== Tema =====
+    const themeKey='gen-docente-theme';
+    const saved=localStorage.getItem(themeKey);
+    if(saved) document.documentElement.style.colorScheme=saved;
+    const themeBtn=document.getElementById('theme');
+    if(themeBtn){
+      themeBtn.addEventListener('click',()=>{
+        const cur=document.documentElement.style.colorScheme;
+        const next=cur==='light'?'dark':'light';
+        document.documentElement.style.colorScheme=next;
+        localStorage.setItem(themeKey,next);
+      });
+    }
+
+    // ===== Pasos (highlight) =====
+    const stepLinks=$$('#steps a');
+    const map={};
+    stepLinks.forEach(a=> map[a.getAttribute('href').slice(1)]=a);
+    const io=new IntersectionObserver(entries=>{
+      entries.forEach(ent=>{
+        if(ent.isIntersecting){
+          stepLinks.forEach(a=>a.classList.remove('active'));
+          const id=ent.target.id;
+          if(map[id]) map[id].classList.add('active');
+        }
+      });
+    }, {root:null, rootMargin:'-55% 0px -45% 0px', threshold:0});
+    $$('main section').forEach(sec=> io.observe(sec));
+
+    // ===== Chips =====
+    function toggleChip(e){ e.currentTarget.classList.toggle('active'); }
+    $$('.chip').forEach(c=> c.addEventListener('click', toggleChip));
+
+    // ===== Copy =====
+    async function copyText(t){
+      try{
+        await navigator.clipboard.writeText(t || '');
+        return true;
+      }catch{
+        // Fallback
+        try{
+          const ta=document.createElement('textarea');
+          ta.value=t || '';
+          ta.style.position='fixed';
+          ta.style.left='-9999px';
+          document.body.appendChild(ta);
+          ta.focus(); ta.select();
+          document.execCommand('copy');
+          ta.remove();
+          return true;
+        }catch{
+          return false;
+        }
+      }
+    }
+    function toast(btn, msg){
+      if(!btn) return;
+      const old=btn.textContent;
+      btn.textContent=msg;
+      setTimeout(()=>btn.textContent=old, 1100);
+    }
+
+    // Copy buttons inside <pre>
+    $$('.copy').forEach(btn=> btn.addEventListener('click', async e=>{
+      const codeEl=e.target.parentElement.querySelector('code');
+      const t=codeEl ? codeEl.innerText : '';
+      const ok=await copyText(t);
+      toast(e.target, ok?'¡Copiado!':'Error');
+    }));
+
+    
+    // ===== Metodología dinámica: si el producto es "Prueba", el desplegable pasa a "Tipo de prueba" =====
+    const teachingOptions = [
+      'mixta (explicación + práctica guiada)',
+      'flipped classroom (clase invertida)',
+      'clase magistral (exposición docente)',
+      'aprendizaje basado en proyectos (ABP)',
+      'aprendizaje cooperativo',
+      'indagación / aprendizaje por descubrimiento',
+      'gamificación',
+      'aprendizaje-servicio (ApS)'
+    ];
+
+    const testOptions = [
+      'prueba escrita tipo test (A/B/C/D)',
+      'prueba escrita de respuesta corta',
+      'prueba escrita de desarrollo / problemas',
+      'prueba práctica / desempeño (tarea en aula)',
+      'prueba oral (preguntas + rúbrica)',
+      'exposición oral evaluable (rúbrica)'
+    ];
+
+    function setSelectOptions(selectEl, options, selectedIndex=0){
+      if(!selectEl) return;
+      selectEl.innerHTML = '';
+      options.forEach((t,i)=>{
+        const opt=document.createElement('option');
+        opt.textContent=t;
+        if(i===selectedIndex) opt.selected=true;
+        selectEl.appendChild(opt);
+      });
+    }
+
+    function syncMetodoWithProducto(){
+      const prod = ($('#p-producto')?.value || '').toLowerCase();
+      const isPrueba = prod.includes('prueba');
+
+      const label = document.getElementById('p-metodo-label');
+      const sel = document.getElementById('p-metodo');
+
+      const modalidadWrap = document.getElementById('modalidad-wrap');
+      const modalidadSel = document.getElementById('p-modalidad');
+
+      if(isPrueba){
+        // En modo PRUEBA: se pide tipo de prueba y se oculta dinámica de aula
+        if(label) label.textContent = 'Tipo de prueba (cómo vas a evaluar)';
+        const cur = sel?.value || '';
+        const idx = testOptions.findIndex(x=>x===cur);
+        setSelectOptions(sel, testOptions, idx>=0?idx:0);
+
+        if(modalidadWrap) modalidadWrap.style.display = 'none';
+        if(modalidadSel) modalidadSel.value = '';
+      }else{
+        // En modo SdA / tareas / guía: se pide metodología y dinámica de aula
+        if(label) label.textContent = 'Metodología (cómo vas a enseñar)';
+        const cur = sel?.value || '';
+        const idx = teachingOptions.findIndex(x=>x===cur);
+        setSelectOptions(sel, teachingOptions, idx>=0?idx:0);
+
+        if(modalidadWrap) modalidadWrap.style.display = '';
+      }
+    }
+
+    // Init + on change
+    const prodSel = document.getElementById('p-producto');
+    if(prodSel) prodSel.addEventListener('change', syncMetodoWithProducto);
+    // Ensure correct state on load
+    syncMetodoWithProducto();
+
+
+    // ===== Flags: incluir opcionales solo si se tocan =====
+    let ajustesUsed=false;
+    let docsUsed=false;
+
+    const markUsed=(wrapId, setter)=>{
+      const wrap=document.getElementById(wrapId);
+      if(!wrap) return;
+      wrap.addEventListener('input', ()=>setter(true), {passive:true});
+      wrap.addEventListener('change', ()=>setter(true), {passive:true});
+    };
+    markUsed('ajustes-wrap', v=>{ajustesUsed=v;});
+    markUsed('docs-wrap', v=>{docsUsed=v;});
+
+    // ===== Prompt base =====
+    function buildBase(){
+      const prod=$('#p-producto')?.value || '[PRODUCTO]';
+      const materia=($('#p-materia')?.value || '').trim() || '[MATERIA]';
+      const etapa=$('#p-etapa')?.value || '[ETAPA]';
+      const curso=$('#p-curso')?.value || '[CURSO]';
+      const objetivo=($('#p-objetivo')?.value || '').trim() || '[OBJETIVO]';
+      const perfil=($('#p-perfil')?.value || '').trim() || '[PERFIL]';
+      const metodo=$('#p-metodo')?.value || 'mixta (explicación + práctica guiada)';
+      const dinamica=$('#p-modalidad')?.value || 'resolución de tareas en aula (práctica guiada)';
+
+      const comp=($('#p-comp')?.value || '').trim();
+      const cc=($('#p-cc')?.value || '').trim();
+      const crit=($('#p-criterios')?.value || '').trim() || '[CRITERIOS]';
+      const sab=($('#p-saberes')?.value || '').trim() || '[SABERES]';
+
+      const tono=$('#p-tono')?.value || 'didáctico y claro';
+      const formato=$('#p-formato')?.value || 'texto por apartados (LOMLOE)';
+      const long=$('#p-long')?.value || 'breve';
+
+      // Chips (solo los del bloque p-opc)
+      const opts={};
+      $$('#p-opc .chip.active').forEach(ch=>{ if(ch.dataset.key) opts[ch.dataset.key]=true; });
+
+      const idioma='español (Canarias)';
+
+      let txt = `Actúa como docente con experiencia en LOMLOE (Canarias). `;
+      txt += `Necesito ${prod} para ${materia}, ${etapa} ${curso}. `;
+      txt += `Grupo: ${perfil}. Objetivo: ${objetivo}. `;
+      const isPrueba = (prod || '').toLowerCase().includes('prueba');
+      if(isPrueba){
+        txt += `Tipo de prueba: ${metodo}. `;
+      }else{
+        txt += `Metodología: ${metodo}. Dinámica de aula: ${dinamica}. `;
+      }
+      txt += `Idioma: ${idioma}. Tono: ${tono}. `;
+
+      if(comp) txt += `Competencias específicas (código + texto): ${comp}. `;
+      if(cc) txt += `Competencias clave: ${cc}. `;
+      txt += `Criterios de evaluación (código + texto): ${crit}. `;
+      txt += `Saberes básicos: ${sab}. `;
+
+      txt += `Devuélvelo en ${formato}. Longitud: ${long}. `;
+
+      if(opts.pasos) txt += `Entrega por partes y espera mi OK para continuar. `;
+      if(opts.dua) txt += `Aplica DUA: consignas claras, apoyos visuales, alternativas de acceso y expresión. `;
+      if(opts.codigos) txt += `Muestra el código de criterio junto a cada apartado/ítem. `;
+      if(opts.evidencias) txt += `Incluye evidencias observables y el instrumento de evaluación (rúbrica/lista de cotejo/escala). `;
+      if(opts.preguntas) txt += `Si falta información, antes de generar hazme 3 preguntas clave (nivel del alumnado, tiempo disponible y cómo vas a evaluar). `;
+
+      return txt.replace(/\s+/g,' ').trim();
+    }
+
+    // ===== Ajustes finos (internal) =====
+    function buildAjustesInternal(){
+      const rol=$('#a-rol')?.value || 'profesor/a (especialista en tu materia)';
+      const estilo=$('#a-estilo')?.value || 'muy práctico (listo para aula)';
+      const notas=($('#a-notas')?.value || '').trim();
+
+      const neae=$('#a-neae')?.value || 'ligero';
+      const ac=$('#a-ac')?.value || 'no';
+      const bloom=$('#a-bloom')?.value || 'aplicar / resolver';
+      const ej=$('#a-ej')?.value || '2';
+
+      const evid=[];
+      $$('#a-evid .chip.active').forEach(ch=> evid.push(ch.textContent.trim()));
+
+      const inst=$('#a-inst')?.value || 'rúbrica';
+      const escala=$('#a-escala')?.value || '4 niveles (Inicial → Excelente)';
+
+      const contexto=($('#a-contexto')?.value || '').trim();
+      const restr=($('#a-restr')?.value || '').trim();
+      const formato=$('#a-formato')?.value || 'texto por apartados';
+
+      let txt = `Ajustes de respuesta: responde como ${rol} con estilo ${estilo}`;
+      if(notas) txt += ` (${notas})`;
+      txt += `. `;
+
+      if(neae && neae !== 'ninguno') txt += `Incluye apoyos NEAE (${neae}). `;
+      if(ac === 'sí') txt += `Incluye una opción de ampliación. `;
+      if(bloom) txt += `Nivel cognitivo: ${bloom}. `;
+      if(ej && ej !== '0') txt += `Incluye ${ej} ejemplo(s) breves por bloque/ítem si ayuda. `;
+
+      if(evid.length) txt += `Evidencias a priorizar: ${evid.join(', ')}. `;
+      if(inst) txt += `Instrumento: ${inst}. `;
+      if(escala) txt += `Escala: ${escala}. `;
+
+      if(contexto) txt += `Contexto: ${contexto}. `;
+      if(restr) txt += `Restricciones: ${restr}. `;
+
+      if(formato) txt += `Formato final: ${formato}. `;
+
+      return txt.replace(/\s+/g,' ').trim();
+    }
+
+    // ===== Orden + ejemplo (internal) =====
+    function buildDocsInternal(){
+      const o=($('#d-orden')?.value || '').trim() || '[ORDEN ESPECÍFICA]';
+      const e=($('#d-ejemplo')?.value || '').trim();
+      let txt = `Documentación adjunta (FUENTE PRIORITARIA): Orden específica / condiciones: ${o}. `;
+      txt += `Respeta estas condiciones por encima de supuestos generales. Si algo no encaja, indícalo y pregúntame. `;
+      if(e) txt += `Usa este ejemplo propio como estándar de calidad (formato, nivel y estilo): ${e}. `;
+      return txt.replace(/\s+/g,' ').trim();
+    }
+
+    // ===== Prompt final =====
+    function buildFinal(){
+      const base = buildBase();
+
+      // include ajustes if user touched optional area
+      let aj = '';
+      if(ajustesUsed) aj = buildAjustesInternal();
+
+      // include docs if touched or has content
+      const o = ($('#d-orden')?.value || '').trim();
+      const e = ($('#d-ejemplo')?.value || '').trim();
+      let docs = '';
+      if(docsUsed || o || e) docs = buildDocsInternal();
+
+      const parts=[base];
+      if(aj) parts.push(aj);
+      if(docs) parts.push(docs);
+
+      const full = parts.join(' ').replace(/\s+/g,' ').trim();
+      const out=$('#m-out');
+      if(out) out.value = full;
+      return full;
+    }
+
+    // Button handlers (Prompt final)
+    const buildBtn=$('#m-build');
+    if(buildBtn){
+      buildBtn.addEventListener('click', ()=>{
+        buildFinal();
+        toast(buildBtn,'Generado ✓');
+      });
+    }
+    const copyBtn=$('#m-copy');
+    if(copyBtn){
+      copyBtn.addEventListener('click', async ()=>{
+        const t = ($('#m-out')?.value || '').trim() || buildFinal();
+        const ok=await copyText(t);
+        toast(copyBtn, ok?'¡Copiado!':'Error');
+      });
+    }
+    const dlBtn=$('#m-dl');
+    if(dlBtn){
+      dlBtn.addEventListener('click', ()=>{
+        const t = ($('#m-out')?.value || '').trim() || buildFinal();
+        const blob = new Blob([t], {type:'text/plain'});
+        const a=document.createElement('a');
+        a.href=URL.createObjectURL(blob);
+        a.download='prompt_final_LOMLOE.txt';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(a.href);
+      });
+    }
+
+    // Quick copy (bottom bar)
+    const qc=document.getElementById('quick-copy');
+    if(qc){
+      qc.addEventListener('click', async ()=>{
+        const t = ($('#m-out')?.value || '').trim() || buildFinal();
+        const ok=await copyText(t);
+        toast(qc, ok?'¡Copiado!':'Error');
+      });
+    }
+
+    // ===== Mejorar por conversación =====
+    function buildImprove(){
+      const reduce=$('#i-reduce')?.value || 25;
+      const words=$('#i-words')?.value || 160;
+      const cmt=($('#i-coment')?.value || '').trim();
+      const ask=$('#i-preguntar')?.value || 'sí';
+      const feats=[];
+      $$('#i-mejoras .chip.active').forEach(ch=> feats.push(ch.textContent.trim()));
+      const improvements = feats.length ? feats.join(', ') : 'ajusta según lo anterior';
+      let txt = `${cmt?('Comentario: '+cmt+'. '):''}Me gusta la base, pero reduce la longitud un ${reduce}% y apunta a ~${words} palabras. Además: ${improvements}. Mantén criterios/saberes (códigos visibles) y añade evidencias observables.`;
+      if(ask==='sí') txt += ` Si falta información, pregúntame antes de asumir.`;
+      const outEl=$('#i-out');
+      if(outEl) outEl.innerText = txt;
+      return txt;
+    }
+    const iGen=$('#i-gen');
+    if(iGen) iGen.addEventListener('click', buildImprove);
+    const iCopy=$('#i-copy');
+    if(iCopy){
+      iCopy.addEventListener('click', async ()=>{
+        const t=($('#i-out')?.innerText || '').trim() || buildImprove();
+        const ok=await copyText(t);
+        toast(iCopy, ok?'¡Copiado!':'Error');
+      });
+    }
+</script>
+
+</body>
+</html>
